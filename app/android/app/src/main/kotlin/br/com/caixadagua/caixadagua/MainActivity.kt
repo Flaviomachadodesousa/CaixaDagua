@@ -1,5 +1,6 @@
 package br.com.caixadagua.caixadagua
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+// FlutterFragmentActivity é exigida pelo local_auth (biometria)
+class MainActivity : FlutterFragmentActivity()

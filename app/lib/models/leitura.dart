@@ -39,11 +39,7 @@ class PontoHistorico {
   final int litros;
   final int percentual;
 
-  const PontoHistorico({
-    required this.timestamp,
-    required this.litros,
-    required this.percentual,
-  });
+  const PontoHistorico({required this.timestamp, required this.litros, required this.percentual});
 
   static PontoHistorico? fromMap(Map<dynamic, dynamic> map) {
     final ts = map['timestamp'];

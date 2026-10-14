@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "375551323648",
+    "firebase_url": "https://caixadagua-b3d63-default-rtdb.firebaseio.com",
+    "project_id": "caixadagua-b3d63",
+    "storage_bucket": "caixadagua-b3d63.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:375551323648:android:0107993e5ff4505c2ef2e5",
+        "android_client_info": {
+          "package_name": "br.com.caixadagua.caixadagua"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "375551323648-576vp9b9ql3fo0kfbir42jhpohr3b7dk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDU_pABxXoBcP8_7wMph3jFPpK5cgVMt_s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "375551323648-576vp9b9ql3fo0kfbir42jhpohr3b7dk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

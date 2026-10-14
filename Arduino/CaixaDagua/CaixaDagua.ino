@@ -9,9 +9,9 @@
   Ligações:
     JSN-SR04T 5V   -> VIN / 5V (5V do USB)
     JSN-SR04T GND  -> GND
-    JSN-SR04T TRIG -> GPIO18
-    JSN-SR04T ECHO -> divisor de tensão -> GPIO19
-                      ECHO --[1k]--+--> GPIO19
+    JSN-SR04T TRIG -> GPIO26
+    JSN-SR04T ECHO -> divisor de tensão -> GPIO27
+                      ECHO --[1k]--+--> GPIO27
                                    |
                                  [2k]
                                    |
@@ -31,8 +31,8 @@
 
 // ================================================================================
 // --- Pinos do sensor ---
-#define PINO_TRIG 18
-#define PINO_ECHO 19
+#define PINO_TRIG 26
+#define PINO_ECHO 27
 
 // ================================================================================
 // --- Medidas da caixa (cm) ---

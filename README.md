@@ -1,5 +1,5 @@
-# CaixaDagua
- Projeto Arduino + Flutter + Firebase
+# Olho d'Água
+ De olho na sua caixa d'água · Projeto Arduino + Flutter + Firebase
 
 Mede o volume de água de uma caixa d'água Fortlev 500 L com um sensor ultrassônico e envia os dados para o Firebase Realtime Database, para serem mostrados em um app Flutter.
 
@@ -8,10 +8,11 @@ Mede o volume de água de uma caixa d'água Fortlev 500 L com um sensor ultrass�
 | Parte | Situação |
 |---|---|
 | Firmware ESP32 ([Arduino/CaixaDagua](Arduino/CaixaDagua)) | ✅ Pronto e compilando (esp32 3.3.12, ESP32 Dev Module). Ainda **não testado** com o sensor ligado. |
-| Regras do Firebase ([firebase/database.rules.json](firebase/database.rules.json)) | ✅ Escritas. Falta publicar no console. |
+| Regras do Firebase ([firebase/database.rules.json](firebase/database.rules.json)) | ✅ Publicadas (`firebase deploy --only database`). |
+| Login no Firebase | ⏳ Falta ativar **E-mail/senha** e criar os usuários no console. |
 | Instalação física do sensor | ⏳ Pendente |
 | Calibração | ⏳ Pendente |
-| App Flutter ([app](app)) | 🚧 Iniciado: login, nível em tempo real e gráfico das últimas 24 h. Falta rodar `flutterfire configure`. |
+| App Flutter ([app](app)) | ✅ Login, nível em tempo real e gráfico das últimas 24 h. Registrado no Firebase (Android e Web). |
 | Alertas (nível baixo, sensor offline) | ⏳ Não iniciado |
 
 
@@ -43,11 +44,11 @@ Mede o volume de água de uma caixa d'água Fortlev 500 L com um sensor ultrass�
 |---|---|
 | 5V | VIN / 5V |
 | GND | GND |
-| TRIG | GPIO18 |
-| ECHO | GPIO19 (via divisor de tensão) |
+| TRIG | GPIO26 |
+| ECHO | GPIO27 (via divisor de tensão) |
 
 ```
-ECHO --[1k]--+--> GPIO19
+ECHO --[1k]--+--> GPIO27
              |
            [2k]
              |
@@ -97,14 +98,25 @@ Volume calculado por altura da água:
 
 ### 2. Firebase
 
+Projeto: `caixadagua-b3d63`.
+
 1. **Authentication → Método de login:** ative **E-mail/senha**.
-2. **Authentication → Users:** crie o usuário do ESP (ex.: `esp@caixadagua.local`).
-3. **Configurações do projeto → Geral:** copie a **Chave de API da Web**.
-4. **Realtime Database → Regras:** cole o conteúdo de [firebase/database.rules.json](firebase/database.rules.json). Se o e-mail do ESP for diferente, troque nas regras.
+2. **Authentication → Users:** crie dois usuários:
+   - o do ESP: `esp@caixadagua.local`;
+   - o seu, para entrar no app.
+3. As regras do banco ficam em [firebase/database.rules.json](firebase/database.rules.json). Para publicar depois de alterar, rode na raiz do repositório:
+
+   ```
+   firebase deploy --only database
+   ```
+
+   Se o e-mail do ESP for diferente de `esp@caixadagua.local`, troque nas regras antes de publicar.
 
 ### 3. Credenciais
 
 Copie `Arduino/CaixaDagua/secrets.example.h` para `Arduino/CaixaDagua/secrets.h` e preencha. O `secrets.h` está no `.gitignore` e não vai para o git.
+
+A `API_KEY` é a **Chave de API da Web** (Configurações do projeto → Geral).
 
 ### 4. Calibração
 
@@ -145,25 +157,55 @@ caixadagua/
 O app fica em [app/](app). Ele tem:
 
 - **Login** com e-mail e senha (Firebase Authentication).
-- **Tela principal** com o desenho da caixa preenchido até o nível atual, os litros, o percentual e o status do sensor (online, erro no sensor ou sem atualização há mais de 5 min).
-- **Gráfico** do nível nas últimas 24 horas.
+- **Tela principal** com a caixa animada (água em ondas) até o nível atual, o percentual, os litros e o status do sensor: online, erro no sensor ou offline (sem atualização há mais de 5 min).
+- **Cartões** com volume, altura da água, consumo estimado (últimas 24 h e média diária de até 7 dias) e horário da última leitura.
+- **Vazamento**: analisa a queda de nível entre 2h e 5h nas últimas 7 madrugadas e avisa quando a caixa perde água num horário em que ninguém costuma usar.
+- **Gráfico** do nível nas últimas 24 horas ou 7 dias.
+- **Login por biometria** (Android): depois do primeiro login com senha, o app oferece ativar a biometria. Com ela ativa, o app pede a digital ao abrir, e a tela de login ganha o botão "Entrar com biometria". Para ligar ou desligar, use o menu ⋮ → "Entrar com biometria". O e-mail e a senha ficam guardados no armazenamento seguro do aparelho (Android Keystore). O celular precisa ter bloqueio de tela e uma digital cadastrada.
+- Tema claro e escuro, seguindo a configuração do celular. A fonte Plus Jakarta Sans vem incluída no app (licença em `assets/fonts/OFL.txt`).
 
 ### Configurar e rodar
 
-1. No console do Firebase, em **Authentication → Users**, crie um usuário para você (diferente do usuário do ESP).
-2. Gere a configuração do Firebase para o app. O comando registra os apps no projeto e sobrescreve o arquivo provisório `lib/firebase_options.dart`:
+O app já está registrado no Firebase (Android e Web), e a configuração fica em `lib/firebase_options.dart`. Para rodar:
 
-   ```
-   dart pub global activate flutterfire_cli
-   cd app
-   flutterfire configure --project=caixadagua-b3d63
-   ```
+```
+cd app
+flutter run
+```
 
-3. Rode o app:
+Entre com o seu usuário (criado no passo 2 da configuração do Firebase).
 
-   ```
-   flutter run
-   ```
+Para ver o app com dados simulados, sem ESP32 e sem login:
+
+```
+flutter run --dart-define=DEMO=true
+```
+
+Para adicionar outra plataforma (ex.: iOS), rode na pasta `app`:
+
+```
+dart pub global activate flutterfire_cli
+flutterfire configure --project=caixadagua-b3d63
+```
+
+### Como o consumo e o vazamento são calculados
+
+Tudo sai do histórico (um ponto a cada 15 min), em [lib/models/analise.dart](app/lib/models/analise.dart).
+
+**Consumo**
+1. Uma mediana móvel de 3 pontos remove leituras isoladas fora da curva (eco ruim, onda na superfície).
+2. Só conta quedas de pelo menos **10 L** (≈ 1 cm na Fortlev 500 L) em relação à última referência. Oscilações menores são ruído do sensor.
+3. Subidas são reabastecimento e não entram na conta.
+
+**Vazamento**
+- Para cada madrugada (2h–5h), calcula a tendência do volume por mínimos quadrados.
+- Perda de **3 L/h ou mais** (≈ 1 cm em 3 h) = possível vazamento.
+- Se entrou água da rua nesse horário, a noite fica "inconclusiva". Com menos de 8 leituras, fica "sem dados".
+
+**Limitações (medindo só o nível)**
+- Se a água da rua estiver entrando enquanto se consome, a boia repõe o volume e esse consumo **não aparece**.
+- Com a caixa cheia e água da rua disponível de madrugada, a boia também repõe o que vaza.
+- Para medir o consumo real, é preciso um sensor de vazão na saída da caixa.
 
 ### Estrutura
 
@@ -171,6 +213,9 @@ O app fica em [app/](app). Ele tem:
 |---|---|
 | `lib/main.dart` | Inicialização do Firebase e troca entre login e tela principal |
 | `lib/models/leitura.dart` | Conversão dos dados do Firebase |
-| `lib/services/caixa_service.dart` | Leitura em tempo real de `atual` e `historico` |
-| `lib/pages/` | Telas de login e principal |
-| `lib/widgets/` | Desenho da caixa e gráfico do histórico |
+| `lib/models/analise.dart` | Cálculo do consumo e detecção de vazamento |
+| `lib/services/caixa_service.dart` | Leitura em tempo real de `atual` e `historico`, e os dados simulados do modo demonstração |
+| `lib/theme.dart` | Cores, tema claro/escuro, fundo e cartões |
+| `lib/services/biometria_service.dart` | Biometria (`local_auth`) e credenciais guardadas (`flutter_secure_storage`) |
+| `lib/pages/` | Telas de login, bloqueio por biometria e principal |
+| `lib/widgets/` | Caixa animada, gráfico, cartões de informação e status |

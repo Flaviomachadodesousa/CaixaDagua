@@ -5,12 +5,17 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
 import 'firebase_options.dart';
+import 'pages/bloqueio_page.dart';
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
+import 'services/caixa_service.dart';
+import 'theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (!modoDemo) {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  }
 
   Intl.defaultLocale = 'pt_BR';
   await initializeDateFormatting('pt_BR');
@@ -26,17 +31,19 @@ class CaixaDaguaApp extends StatelessWidget {
     return MaterialApp(
       title: "Caixa d'Água",
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorSchemeSeed: Colors.lightBlue),
-      darkTheme: ThemeData(colorSchemeSeed: Colors.lightBlue, brightness: Brightness.dark),
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
-          }
-          return snapshot.hasData ? const HomePage() : const LoginPage();
-        },
-      ),
+      theme: construirTema(Brightness.light),
+      darkTheme: construirTema(Brightness.dark),
+      home: modoDemo
+          ? const HomePage()
+          : StreamBuilder<User?>(
+              stream: FirebaseAuth.instance.authStateChanges(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                }
+                return snapshot.hasData ? const BloqueioGate(child: HomePage()) : const LoginPage();
+              },
+            ),
     );
   }
 }
