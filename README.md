@@ -11,10 +11,9 @@ Mede o volume de água de uma caixa d'água Fortlev 500 L com um sensor ultrass�
 | Regras do Firebase ([firebase/database.rules.json](firebase/database.rules.json)) | ✅ Escritas. Falta publicar no console. |
 | Instalação física do sensor | ⏳ Pendente |
 | Calibração | ⏳ Pendente |
-| App Flutter | ⏳ Não iniciado |
+| App Flutter ([app](app)) | 🚧 Iniciado: login, nível em tempo real e gráfico das últimas 24 h. Falta rodar `flutterfire configure`. |
 | Alertas (nível baixo, sensor offline) | ⏳ Não iniciado |
 
-> ⚠️ **Credenciais antigas expostas:** versões anteriores do código (`Arduino/conectarwifi.ino`) tinham a senha do Wi-Fi, o secret do Firebase e uma chave da OpenWeather. Elas continuam no histórico do git e **devem ser trocadas**.
 
 ## Como funciona
 
@@ -141,10 +140,37 @@ caixadagua/
 
 `timestamp` é o horário do servidor do Firebase, em milissegundos.
 
-## Próximos passos
+## App Flutter
 
-- [ ] Trocar as credenciais expostas no histórico do git
-- [ ] Publicar as regras do Firebase
-- [ ] Instalar o sensor e calibrar
-- [ ] App Flutter: tela com nível em tempo real (`/caixadagua/atual`) e gráfico do histórico
-- [ ] Alertas via Cloud Functions + FCM: nível baixo e sensor sem atualizar há mais de 30 min
+O app fica em [app/](app). Ele tem:
+
+- **Login** com e-mail e senha (Firebase Authentication).
+- **Tela principal** com o desenho da caixa preenchido até o nível atual, os litros, o percentual e o status do sensor (online, erro no sensor ou sem atualização há mais de 5 min).
+- **Gráfico** do nível nas últimas 24 horas.
+
+### Configurar e rodar
+
+1. No console do Firebase, em **Authentication → Users**, crie um usuário para você (diferente do usuário do ESP).
+2. Gere a configuração do Firebase para o app. O comando registra os apps no projeto e sobrescreve o arquivo provisório `lib/firebase_options.dart`:
+
+   ```
+   dart pub global activate flutterfire_cli
+   cd app
+   flutterfire configure --project=caixadagua-b3d63
+   ```
+
+3. Rode o app:
+
+   ```
+   flutter run
+   ```
+
+### Estrutura
+
+| Arquivo | Conteúdo |
+|---|---|
+| `lib/main.dart` | Inicialização do Firebase e troca entre login e tela principal |
+| `lib/models/leitura.dart` | Conversão dos dados do Firebase |
+| `lib/services/caixa_service.dart` | Leitura em tempo real de `atual` e `historico` |
+| `lib/pages/` | Telas de login e principal |
+| `lib/widgets/` | Desenho da caixa e gráfico do histórico |
