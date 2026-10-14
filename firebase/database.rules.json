@@ -1,0 +1,11 @@
+{
+  "rules": {
+    "caixadagua": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.email === 'esp@caixadagua.local'",
+      "historico": {
+        ".indexOn": ["timestamp"]
+      }
+    }
+  }
+}
