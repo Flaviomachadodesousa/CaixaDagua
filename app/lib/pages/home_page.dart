@@ -11,6 +11,7 @@ import '../services/biometria_service.dart';
 import '../services/caixa_service.dart';
 import '../theme.dart';
 import '../widgets/caixa_widget.dart';
+import '../widgets/cartao_clima.dart';
 import '../widgets/cartao_vazamento.dart';
 import '../widgets/historico_chart.dart';
 import '../widgets/info_card.dart';
@@ -39,23 +40,57 @@ class _HomePageState extends State<HomePage> {
   // Redesenha periodicamente para detectar quando o sensor fica offline.
   late final Timer _relogio;
 
+  final _chaveClima = GlobalKey<CartaoClimaState>();
+
   @override
   void initState() {
     super.initState();
-    _assinaturaAtual = _service.atual().listen(
-      (leitura) => setState(() {
-        _leitura = leitura;
-        _carregando = false;
-        _erro = null;
-      }),
-      onError: (Object e) => setState(() {
-        _erro = e;
-        _carregando = false;
-      }),
-    );
+    _ouvirAtual();
     _ouvirHistorico();
     _relogio = Timer.periodic(const Duration(seconds: 30), (_) => setState(() {}));
     WidgetsBinding.instance.addPostFrameCallback((_) => _oferecerBiometria());
+  }
+
+  /// Puxar para atualizar: reassina a leitura e o histórico (recupera de um erro
+  /// de conexão) e busca o tempo de novo. Termina quando tudo respondeu ou em 10 s.
+  Future<void> _atualizar() async {
+    try {
+      await Future.wait([
+        _ouvirAtual(),
+        _ouvirHistorico(),
+        if (_chaveClima.currentState case final clima?) clima.atualizar(),
+      ]).timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      // Sem resposta a tempo: o indicador some e os streams continuam ouvindo.
+    }
+  }
+
+  /// Assina a leitura atual. O Future completa com o primeiro valor ou erro.
+  Future<void> _ouvirAtual() {
+    final primeiro = Completer<void>();
+    void concluir() {
+      if (!primeiro.isCompleted) primeiro.complete();
+    }
+
+    _assinaturaAtual?.cancel();
+    _assinaturaAtual = _service.atual().listen(
+      (leitura) {
+        setState(() {
+          _leitura = leitura;
+          _carregando = false;
+          _erro = null;
+        });
+        concluir();
+      },
+      onError: (Object e) {
+        setState(() {
+          _erro = e;
+          _carregando = false;
+        });
+        concluir();
+      },
+    );
+    return primeiro.future;
   }
 
   /// Logo depois do primeiro login com senha, pergunta uma vez se a pessoa
@@ -100,11 +135,21 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// Busca sempre 7 dias: o gráfico de 24 h, o consumo e a análise das
-  /// madrugadas saem da mesma lista.
-  void _ouvirHistorico() {
+  /// madrugadas saem da mesma lista. O Future completa com o primeiro valor ou erro.
+  Future<void> _ouvirHistorico() {
+    final primeiro = Completer<void>();
+    void concluir() {
+      if (!primeiro.isCompleted) primeiro.complete();
+    }
+
+    _assinaturaHistorico?.cancel();
     _assinaturaHistorico = _service
         .historico(DateTime.now().subtract(Periodo.semana.duracao))
-        .listen((pontos) => setState(() => _pontos = pontos));
+        .listen((pontos) {
+          setState(() => _pontos = pontos);
+          concluir();
+        }, onError: (Object _) => concluir());
+    return primeiro.future;
   }
 
   List<PontoHistorico>? _pontosDoPeriodo() {
@@ -129,48 +174,59 @@ class _HomePageState extends State<HomePage> {
         child: SafeArea(
           child: LayoutBuilder(
             // Em paisagem ou tablet, centraliza o conteúdo numa coluna de até 560 px.
-            builder: (context, restricoes) => ListView(
-              padding: EdgeInsets.fromLTRB(
-                math.max(20, (restricoes.maxWidth - _larguraMaxima) / 2),
-                12,
-                math.max(20, (restricoes.maxWidth - _larguraMaxima) / 2),
-                32,
-              ),
-              children: [
-                _Cabecalho(leitura: leitura, carregando: _carregando),
-                const SizedBox(height: 20),
-                if (_carregando)
-                  const Cartao(
-                    child: SizedBox(height: 320, child: Center(child: CircularProgressIndicator())),
-                  )
-                else if (_erro != null)
-                  _Mensagem(
-                    icone: Icons.error_outline_rounded,
-                    titulo: 'Erro ao ler os dados',
-                    texto: '$_erro',
-                  )
-                else if (leitura == null)
-                  const _Mensagem(
-                    icone: Icons.sensors_off_rounded,
-                    titulo: 'Nenhuma leitura recebida',
-                    texto: 'Verifique se o ESP32 está ligado e conectado ao Wi-Fi.',
-                  )
-                else ...[
-                  _PainelNivel(leitura: leitura),
-                  const SizedBox(height: 16),
-                  _GradeInfo(leitura: leitura, pontos: _pontos),
-                ],
-                const SizedBox(height: 16),
-                _CartaoHistorico(
-                  periodo: _periodo,
-                  pontos: _pontosDoPeriodo(),
-                  aoMudarPeriodo: (periodo) => setState(() => _periodo = periodo),
+            builder: (context, restricoes) => RefreshIndicator(
+              onRefresh: _atualizar,
+              color: corAgua,
+              child: ListView(
+                // Permite puxar mesmo quando o conteúdo cabe na tela.
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  math.max(20, (restricoes.maxWidth - _larguraMaxima) / 2),
+                  12,
+                  math.max(20, (restricoes.maxWidth - _larguraMaxima) / 2),
+                  32,
                 ),
-                if (_pontos != null) ...[
+                children: [
+                  _Cabecalho(leitura: leitura, carregando: _carregando),
+                  const SizedBox(height: 20),
+                  if (_carregando)
+                    const Cartao(
+                      child: SizedBox(
+                        height: 320,
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    )
+                  else if (_erro != null)
+                    _Mensagem(
+                      icone: Icons.error_outline_rounded,
+                      titulo: 'Erro ao ler os dados',
+                      texto: '$_erro',
+                    )
+                  else if (leitura == null)
+                    const _Mensagem(
+                      icone: Icons.sensors_off_rounded,
+                      titulo: 'Nenhuma leitura recebida',
+                      texto: 'Verifique se o ESP32 está ligado e conectado ao Wi-Fi.',
+                    )
+                  else ...[
+                    _PainelNivel(leitura: leitura),
+                    const SizedBox(height: 16),
+                    _GradeInfo(leitura: leitura, pontos: _pontos),
+                  ],
                   const SizedBox(height: 16),
-                  CartaoVazamento(noites: analisarMadrugadas(_pontos!, DateTime.now())),
+                  CartaoClima(key: _chaveClima),
+                  const SizedBox(height: 16),
+                  _CartaoHistorico(
+                    periodo: _periodo,
+                    pontos: _pontosDoPeriodo(),
+                    aoMudarPeriodo: (periodo) => setState(() => _periodo = periodo),
+                  ),
+                  if (_pontos != null) ...[
+                    const SizedBox(height: 16),
+                    CartaoVazamento(noites: analisarMadrugadas(_pontos!, DateTime.now())),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

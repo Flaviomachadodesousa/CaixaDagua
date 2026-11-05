@@ -160,6 +160,7 @@ O app fica em [app/](app). Ele tem:
 - **Tela principal** com a caixa animada (água em ondas) até o nível atual, o percentual, os litros e o status do sensor: online, erro no sensor ou offline (sem atualização há mais de 5 min).
 - **Cartões** com volume, altura da água, consumo estimado (últimas 24 h e média diária de até 7 dias) e horário da última leitura.
 - **Vazamento**: analisa a queda de nível entre 2h e 5h nas últimas 7 madrugadas e avisa quando a caixa perde água num horário em que ninguém costuma usar.
+- **Tempo agora** no Grajaú (São Paulo): temperatura, sensação térmica, umidade e condição do tempo, mais a previsão de hoje e dos próximos 2 dias (máxima/mínima, chance e quantidade de chuva), pela API gratuita [Open-Meteo](https://open-meteo.com) (sem chave). Atualiza a cada 15 min. As coordenadas ficam em `lib/services/clima_service.dart`.
 - **Gráfico** do nível nas últimas 24 horas ou 7 dias.
 - **Login por biometria** (Android): depois do primeiro login com senha, o app oferece ativar a biometria. Com ela ativa, o app pede a digital ao abrir, e a tela de login ganha o botão "Entrar com biometria". Para ligar ou desligar, use o menu ⋮ → "Entrar com biometria". O e-mail e a senha ficam guardados no armazenamento seguro do aparelho (Android Keystore). O celular precisa ter bloqueio de tela e uma digital cadastrada.
 - Tema claro e escuro, seguindo a configuração do celular. A fonte Plus Jakarta Sans vem incluída no app (licença em `assets/fonts/OFL.txt`).
@@ -216,6 +217,7 @@ Tudo sai do histórico (um ponto a cada 15 min), em [lib/models/analise.dart](ap
 | `lib/models/analise.dart` | Cálculo do consumo e detecção de vazamento |
 | `lib/services/caixa_service.dart` | Leitura em tempo real de `atual` e `historico`, e os dados simulados do modo demonstração |
 | `lib/theme.dart` | Cores, tema claro/escuro, fundo e cartões |
+| `lib/models/clima.dart`, `lib/services/clima_service.dart` | Tempo atual no Grajaú (Open-Meteo) |
 | `lib/services/biometria_service.dart` | Biometria (`local_auth`) e credenciais guardadas (`flutter_secure_storage`) |
 | `lib/pages/` | Telas de login, bloqueio por biometria e principal |
 | `lib/widgets/` | Caixa animada, gráfico, cartões de informação e status |
