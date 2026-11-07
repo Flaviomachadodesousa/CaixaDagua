@@ -30,7 +30,7 @@ Uma porta `COMx` em `$ARGUMENTS` dispensa a detecção.
    ```
 
    O projeto foi validado com o core **3.3.12**. Se houver outra versão instalada, avise e não troque sem perguntar.
-3. **secrets.h**: confira se `Arduino/CaixaDagua/secrets.h` existe. Se não existir, **pare** e explique: copiar `secrets.example.h` para `secrets.h` e preencher Wi-Fi (rede 2,4 GHz), `API_KEY` e a senha do usuário `esp@caixadagua.local`. Não crie o arquivo com valores inventados e nunca mostre o conteúdo dele na resposta (tem senhas).
+3. **secrets.h**: confira se `Arduino/CaixaDagua/secrets.h` existe. Se não existir, **pare** e explique: copiar `secrets.example.h` para `secrets.h` e preencher Wi-Fi (rede 2,4 GHz), `API_KEY` e a senha do usuário `esp@caixadagua.com`. Não crie o arquivo com valores inventados e nunca mostre o conteúdo dele na resposta (tem senhas).
 
 ## 2. Compilar
 

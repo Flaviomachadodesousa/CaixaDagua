@@ -11,5 +11,5 @@
 #define DATABASE_URL "https://caixadagua-b3d63-default-rtdb.firebaseio.com/"
 
 // Usuário criado em Authentication > Users (provedor E-mail/senha)
-#define USER_EMAIL    "esp@caixadagua.local"
+#define USER_EMAIL    "esp@caixadagua.com"
 #define USER_PASSWORD "senha_do_usuario_esp"

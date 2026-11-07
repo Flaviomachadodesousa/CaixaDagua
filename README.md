@@ -102,7 +102,7 @@ Projeto: `caixadagua-b3d63`.
 
 1. **Authentication → Método de login:** ative **E-mail/senha**.
 2. **Authentication → Users:** crie dois usuários:
-   - o do ESP: `esp@caixadagua.local`;
+   - o do ESP: `esp@caixadagua.com`;
    - o seu, para entrar no app.
 3. As regras do banco ficam em [firebase/database.rules.json](firebase/database.rules.json). Para publicar depois de alterar, rode na raiz do repositório:
 
@@ -110,7 +110,7 @@ Projeto: `caixadagua-b3d63`.
    firebase deploy --only database
    ```
 
-   Se o e-mail do ESP for diferente de `esp@caixadagua.local`, troque nas regras antes de publicar.
+   Se o e-mail do ESP for diferente de `esp@caixadagua.com`, troque nas regras antes de publicar.
 
 ### 3. Credenciais
 

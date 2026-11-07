@@ -50,7 +50,7 @@ Pontos importantes:
 - `/caixadagua/atual` é sobrescrito a cada 1 min. Com o sensor em erro, o firmware só atualiza `status: "erro_sensor"` e `timestamp` (via `updateNode`), e os litros antigos continuam lá. Por isso o app usa `sensorOk` antes de confiar nos números.
 - `/caixadagua/historico` recebe um `push` a cada 15 min, só com `litros`, `percentual` e `timestamp`. O app consulta com `orderByChild('timestamp')`, que depende do `.indexOn` nas regras.
 - `timestamp` é o horário do servidor (`{".sv": "timestamp"}`), em ms.
-- Só o usuário `esp@caixadagua.local` pode escrever. Qualquer usuário autenticado pode ler.
+- Só o usuário `esp@caixadagua.com` pode escrever. Qualquer usuário autenticado pode ler.
 - O app considera o sensor offline quando passam 5 min sem leitura (`Leitura.estaOnline`). Isso depende do intervalo de 1 min do firmware.
 
 ## Arquitetura do app

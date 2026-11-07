@@ -2,7 +2,7 @@
   "rules": {
     "caixadagua": {
       ".read": "auth != null",
-      ".write": "auth != null && auth.token.email === 'esp@caixadagua.local'",
+      ".write": "auth != null && auth.token.email === 'esp@caixadagua.com'",
       "historico": {
         ".indexOn": ["timestamp"]
       }
