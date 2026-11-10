@@ -21,13 +21,22 @@
     - "Firebase Arduino Client Library for ESP8266 and ESP32" (Mobizt)
 
   Credenciais: copie secrets.example.h para secrets.h e preencha.
+
+  Atualização pela rede (OTA): depois da primeira gravação pelo USB, a placa
+  aparece na Arduino IDE como porta de rede "caixadagua" (senha OTA_PASSWORD).
  */
 
 // ================================================================================
 // --- Inclusão das bibliotecas ---
 #include <WiFi.h>
+#include <ArduinoOTA.h>
+#include <esp_task_wdt.h>
 #include <Firebase_ESP_Client.h>
 #include "secrets.h"
+
+#ifndef OTA_PASSWORD
+#error "Falta OTA_PASSWORD no secrets.h. Veja secrets.example.h."
+#endif
 
 // ================================================================================
 // --- Pinos do sensor ---
@@ -66,6 +75,16 @@
 #define CAMINHO_ATUAL     "/caixadagua/atual"
 #define CAMINHO_HISTORICO "/caixadagua/historico"
 
+// --- Recuperação automática ---
+// Depois de instalada, a placa precisa se virar sozinha. Reiniciar resolve
+// quase tudo (roteador que reiniciou, token preso, pilha de rede travada).
+#define TIMEOUT_WIFI_BOOT_MS    (30UL * 1000)        // sem Wi-Fi no boot: reinicia
+#define REINICIAR_SEM_ENVIO_MS  (15UL * 60 * 1000)   // nenhum envio aceito nesse tempo: reinicia
+#define WATCHDOG_S              120                  // loop parado por mais que isso: reinicia
+
+// --- Atualização pela rede (OTA) ---
+#define NOME_OTA "caixadagua"
+
 // ================================================================================
 // --- Variáveis globais ---
 FirebaseData firebaseData;
@@ -75,6 +94,7 @@ FirebaseConfig config;
 unsigned long ultimaLeitura = 0;
 unsigned long ultimoHistorico = 0;
 bool primeiroHistorico = true;
+unsigned long ultimoEnvioOk = 0;
 
 // ================================================================================
 // --- Sensor ---
@@ -141,7 +161,8 @@ float volumeLitros(float h) {
 // ================================================================================
 // --- Firebase ---
 
-void enviarLeitura(float distancia, bool gravarHistorico) {
+// Retorna true se o Firebase aceitou a gravação em /atual.
+bool enviarLeitura(float distancia, bool gravarHistorico) {
   FirebaseJson json;
 
   if (distancia < 0) {
@@ -149,8 +170,9 @@ void enviarLeitura(float distancia, bool gravarHistorico) {
     json.set("timestamp/.sv", "timestamp");
     if (!Firebase.RTDB.updateNode(&firebaseData, CAMINHO_ATUAL, &json)) {
       Serial.printf("Erro ao enviar status: %s\n", firebaseData.errorReason().c_str());
+      return false;
     }
-    return;
+    return true;
   }
 
   float altura = constrain(DIST_SENSOR_FUNDO_CM - distancia, 0, ALTURA_CAIXA_CM);
@@ -171,6 +193,7 @@ void enviarLeitura(float distancia, bool gravarHistorico) {
 
   if (!Firebase.RTDB.setJSON(&firebaseData, CAMINHO_ATUAL, &json)) {
     Serial.printf("Erro ao enviar leitura: %s\n", firebaseData.errorReason().c_str());
+    return false;
   }
 
   if (gravarHistorico) {
@@ -183,6 +206,33 @@ void enviarLeitura(float distancia, bool gravarHistorico) {
       Serial.printf("Erro ao gravar historico: %s\n", firebaseData.errorReason().c_str());
     }
   }
+  return true;
+}
+
+// ================================================================================
+// --- Recuperação automática ---
+
+// O core do Arduino já liga o watchdog de tarefas (5 s), mas sem vigiar o loop.
+// Aqui o loop passa a ser vigiado, com prazo maior que a pior chamada ao Firebase.
+void iniciarWatchdog() {
+  esp_task_wdt_config_t configWdt = {
+    .timeout_ms = WATCHDOG_S * 1000,
+    .idle_core_mask = 1 << 0,   // continua vigiando a tarefa ociosa do núcleo 0, como no padrão
+    .trigger_panic = true,      // estourou o prazo: reinicia a placa
+  };
+  esp_task_wdt_reconfigure(&configWdt);
+  esp_task_wdt_add(NULL);       // NULL = tarefa atual (setup e loop rodam na mesma)
+}
+
+void iniciarOta() {
+  ArduinoOTA.setHostname(NOME_OTA);
+  ArduinoOTA.setPassword(OTA_PASSWORD);
+  ArduinoOTA.onStart([]() { Serial.println("OTA: recebendo firmware..."); });
+  // A gravação roda dentro do loop e pode passar do prazo do watchdog.
+  ArduinoOTA.onProgress([](unsigned int, unsigned int) { esp_task_wdt_reset(); });
+  ArduinoOTA.onEnd([]() { Serial.println("OTA: concluída, reiniciando."); });
+  ArduinoOTA.onError([](ota_error_t erro) { Serial.printf("OTA: erro %u\n", erro); });
+  ArduinoOTA.begin();
 }
 
 // ================================================================================
@@ -191,6 +241,8 @@ void enviarLeitura(float distancia, bool gravarHistorico) {
 void setup() {
   Serial.begin(115200);
   Serial.println();
+
+  iniciarWatchdog();
 
   pinMode(PINO_TRIG, OUTPUT);
   pinMode(PINO_ECHO, INPUT);
@@ -204,13 +256,21 @@ void setup() {
   WiFi.setAutoReconnect(true);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
+  // Se o roteador estiver desligado, reinicia e tenta de novo, em vez de travar aqui.
+  unsigned long inicioWifi = millis();
   while (WiFi.status() != WL_CONNECTED) {
+    if (millis() - inicioWifi >= TIMEOUT_WIFI_BOOT_MS) {
+      Serial.println("\nSem Wi-Fi. Reiniciando...");
+      ESP.restart();
+    }
     delay(500);
     Serial.print(".");
   }
   Serial.println();
   Serial.print("Conectado: ");
   Serial.println(WiFi.localIP());
+
+  iniciarOta();
 
   // Firebase com usuário/senha (Authentication > E-mail/senha)
   config.api_key = API_KEY;
@@ -220,13 +280,24 @@ void setup() {
 
   Firebase.reconnectWiFi(true);
   Firebase.begin(&config, &auth);
+
+  ultimoEnvioOk = millis();
 }
 
 // ================================================================================
 // --- Loop ---
 
 void loop() {
+  esp_task_wdt_reset();
+  ArduinoOTA.handle();   // antes de tudo: o OTA tem que funcionar mesmo com o Firebase fora
+
   unsigned long agora = millis();
+
+  if (agora - ultimoEnvioOk >= REINICIAR_SEM_ENVIO_MS) {
+    Serial.printf("Nenhum envio aceito pelo Firebase em %lu min. Reiniciando...\n",
+                  REINICIAR_SEM_ENVIO_MS / 60000);
+    ESP.restart();
+  }
 
   if (!Firebase.ready()) return;
   if (agora - ultimaLeitura < INTERVALO_LEITURA_MS && ultimaLeitura != 0) return;
@@ -238,5 +309,7 @@ void loop() {
     primeiroHistorico = false;
   }
 
-  enviarLeitura(medirDistanciaCm(), gravarHistorico);
+  if (enviarLeitura(medirDistanciaCm(), gravarHistorico)) {
+    ultimoEnvioOk = millis();
+  }
 }

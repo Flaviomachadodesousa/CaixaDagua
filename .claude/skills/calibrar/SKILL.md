@@ -78,7 +78,7 @@ python -I .claude/skills/calibrar/volume.py --fundo <D_FUNDO> --topo <D_TOPO> --
    - a menção a 470 L / 52 cm no [CLAUDE.md](../../../CLAUDE.md).
 5. Compare os "litros por cm" que o script mostra com o pressuposto do app (≈ 10 L por cm, usado em `limiarRuidoLitros` e `limiarVazamentoLitrosPorHora` de [analise.dart](../../../app/lib/models/analise.dart)). Se a diferença passar de ~30%, **avise** e não mude esses limiares sozinho.
 6. Se a calibração estiver concluída, marque "Calibração" como ✅ na tabela "Status atual" do README.
-7. Lembre que o firmware precisa ser compilado e gravado de novo (`/firmware`) para valer.
+7. Lembre que o firmware precisa ser compilado e gravado de novo para valer: `/firmware` pelo USB ou, com a placa já instalada, `/firmware ota` pela rede.
 
 ## Resumo final
 

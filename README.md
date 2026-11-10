@@ -7,7 +7,7 @@ Mede o volume de água de uma caixa d'água Fortlev 500 L com um sensor ultrass�
 
 | Parte | Situação |
 |---|---|
-| Firmware ESP32 ([Arduino/CaixaDagua](Arduino/CaixaDagua)) | ✅ Pronto e compilando (esp32 3.3.12, ESP32 Dev Module). Ainda **não testado** com o sensor ligado. |
+| Firmware ESP32 ([Arduino/CaixaDagua](Arduino/CaixaDagua)) | ✅ Pronto e compilando (esp32 3.3.12, ESP32 Dev Module), com atualização pela rede (OTA) e reinício automático. Ainda **não testado** com o sensor ligado. |
 | Regras do Firebase ([firebase/database.rules.json](firebase/database.rules.json)) | ✅ Publicadas (`firebase deploy --only database`). |
 | Login no Firebase | ⏳ Falta ativar **E-mail/senha** e criar os usuários no console. |
 | Instalação física do sensor | ⏳ Pendente |
@@ -28,6 +28,16 @@ Mede o volume de água de uma caixa d'água Fortlev 500 L com um sensor ultrass�
    ```
 
 4. A cada 1 minuto grava a leitura atual no Firebase. A cada 15 minutos grava também um registro no histórico.
+
+### Recuperação automática
+
+Depois de instalado no telhado, o ESP32 precisa se recuperar sozinho. Ele reinicia quando:
+
+- não conecta ao Wi-Fi em **30 s** ao ligar (ex.: o roteador também está reiniciando);
+- passa **15 min** sem o Firebase aceitar uma leitura (Wi-Fi caído, token preso, internet fora);
+- o loop fica parado por mais de **2 min** (watchdog).
+
+Os tempos ficam nos `#define` da seção "Recuperação automática" do [CaixaDagua.ino](Arduino/CaixaDagua/CaixaDagua.ino).
 
 ## Hardware
 
@@ -95,6 +105,7 @@ Volume calculado por altura da água:
 2. Em **Gerenciador de Placas**, instale **esp32** (Espressif Systems).
 3. Em **Gerenciador de Bibliotecas**, instale **Firebase Arduino Client Library for ESP8266 and ESP32** (Mobizt).
 4. Selecione a placa **ESP32 Dev Module**.
+5. Em **Ferramentas → Partition Scheme**, escolha **Minimal SPIFFS (1.9MB APP with OTA/128KB SPIFFS)**. No esquema padrão o firmware ocupa 96% do espaço e qualquer acréscimo deixa de caber. O esquema de partições só muda pelo cabo USB, então defina antes da primeira gravação e mantenha sempre o mesmo, inclusive nas gravações pela rede.
 
 ### 2. Firebase
 
@@ -118,6 +129,8 @@ Copie `Arduino/CaixaDagua/secrets.example.h` para `Arduino/CaixaDagua/secrets.h`
 
 A `API_KEY` é a **Chave de API da Web** (Configurações do projeto → Geral).
 
+A `OTA_PASSWORD` é uma senha que você inventa, pedida ao gravar o firmware pela rede (veja o passo 5). Sem ela o sketch não compila.
+
 ### 4. Calibração
 
 Ajuste as constantes no topo de [CaixaDagua.ino](Arduino/CaixaDagua/CaixaDagua.ino):
@@ -130,6 +143,16 @@ Ajuste as constantes no topo de [CaixaDagua.ino](Arduino/CaixaDagua/CaixaDagua.i
 | `FATOR_CORRECAO` | Ajuste final, se os litros calculados não baterem com os reais |
 
 Abra o Monitor Serial (115200 baud) e compare a altura mostrada com a medida feita com trena.
+
+### 5. Atualização pela rede (OTA)
+
+A **primeira** gravação precisa ser pelo cabo USB. Depois disso, com o ESP32 ligado e na mesma rede do computador, dá para gravar sem tirar a placa da caixa:
+
+1. Na Arduino IDE, em **Ferramentas → Porta**, escolha a porta de rede **caixadagua** (aparece com o IP da placa). Se ela não aparecer, espere 1 min ou reinicie a IDE.
+2. Clique em **Carregar** e informe a `OTA_PASSWORD`.
+3. Na primeira vez, o Windows pode pedir para liberar o `espota` no firewall. Libere para redes privadas: é por ali que a placa baixa o firmware.
+
+Pela rede não existe Monitor Serial. Para ver a saída, use o cabo USB.
 
 ## Dados no Firebase
 

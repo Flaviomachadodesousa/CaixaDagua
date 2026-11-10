@@ -13,3 +13,7 @@
 // Usuário criado em Authentication > Users (provedor E-mail/senha)
 #define USER_EMAIL    "esp@caixadagua.com"
 #define USER_PASSWORD "senha_do_usuario_esp"
+
+// --- Atualização pela rede (OTA) ---
+// Pedida pela Arduino IDE ao gravar pela rede. Invente uma; não precisa ser a do Wi-Fi.
+#define OTA_PASSWORD "senha_para_gravar_pela_rede"

@@ -32,7 +32,7 @@ Regras do banco (rodar na **raiz** do repositório, onde está o `firebase.json`
 firebase deploy --only database
 ```
 
-Firmware: compilado pela Arduino IDE (placa **ESP32 Dev Module**, core esp32 3.3.12, biblioteca "Firebase Arduino Client Library for ESP8266 and ESP32" da Mobizt). O `arduino-cli` não está instalado nesta máquina. Para compilar é preciso `Arduino/CaixaDagua/secrets.h`, copiado de `secrets.example.h`; ele fica no `.gitignore`.
+Firmware: compilado pela Arduino IDE (placa **ESP32 Dev Module**, core esp32 3.3.12, biblioteca "Firebase Arduino Client Library for ESP8266 and ESP32" da Mobizt). Use o esquema de partições **Minimal SPIFFS** (FQBN `esp32:esp32:esp32:PartitionScheme=min_spiffs`): no padrão o sketch ocupa 96% da partição de app, e o esquema só muda por USB, não por OTA. O `arduino-cli` não está no PATH, mas vem embutido na IDE em `/c/Program Files/Arduino IDE/resources/app/lib/backend/resources/arduino-cli.exe` e usa as mesmas pastas de core e bibliotecas que ela. Depois da primeira gravação por USB, o firmware também pode ser gravado pela rede (OTA, hostname `caixadagua`, senha `OTA_PASSWORD`). Para compilar é preciso `Arduino/CaixaDagua/secrets.h`, copiado de `secrets.example.h`; ele fica no `.gitignore`.
 
 ## Contrato de dados (Firebase)
 
