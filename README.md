@@ -154,6 +154,8 @@ A **primeira** gravação precisa ser pelo cabo USB. Depois disso, com o ESP32 l
 
 Pela rede não existe Monitor Serial. Para ver a saída, use o cabo USB.
 
+Passo a passo completo, gravação pela linha de comando, problemas comuns e cuidados: [docs/OTA.md](docs/OTA.md).
+
 ## Dados no Firebase
 
 ```
